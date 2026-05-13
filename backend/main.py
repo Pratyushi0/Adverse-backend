@@ -1,27 +1,24 @@
-"""
-Adversarial AI Defense System - FastAPI Backend
-"""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
 
 from routers import health, query, attacks, metrics
-from bert_classifier import BERTClassifier
-from cosine_drift_monitor import CosineDriftMonitor
-from retrieval_engine import RetrievalEngine
-from integrity_scorer import IntegrityScorer
-from pipeline import RAGPipeline
+from ml.bert_classifier import BERTClassifier
+from ml.cosine_drift_monitor import CosineDriftMonitor
+from ml.retrieval_engine import RetrievalEngine
+from ml.integrity_scorer import IntegrityScorer
+from ml.pipeline import RAGPipeline
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: initialize ML components
+    # Startup: initialize all ML components
     classifier = BERTClassifier()
     drift_monitor = CosineDriftMonitor()
     retrieval_engine = RetrievalEngine()
     integrity_scorer = IntegrityScorer()
-    pipeline = RAGPipeline()
+    pipeline = RAGPipeline(classifier, drift_monitor, retrieval_engine, integrity_scorer)
 
     app.state.classifier = classifier
     app.state.drift_monitor = drift_monitor
@@ -46,7 +43,7 @@ app = FastAPI(
 # ── CORS ──────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],        # lock down to Vercel URL after testing
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
