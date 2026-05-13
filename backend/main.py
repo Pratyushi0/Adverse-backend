@@ -1,14 +1,18 @@
+"""
+Adversarial AI Defense System - FastAPI Backend
+"""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
 
 from routers import health, query, attacks, metrics
-from ml.bert_classifier import BERTClassifier
-from ml.cosine_drift_monitor import CosineDriftMonitor
-from ml.retrieval_engine import RetrievalEngine
-from ml.integrity_scorer import IntegrityScorer
-from ml.pipeline import RAGPipeline
+from bert_classifier import BERTClassifier
+from cosine_drift_monitor import CosineDriftMonitor
+from retrieval_engine import RetrievalEngine
+from integrity_scorer import IntegrityScorer
+from pipeline import RAGPipeline
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -17,7 +21,7 @@ async def lifespan(app: FastAPI):
     drift_monitor = CosineDriftMonitor()
     retrieval_engine = RetrievalEngine()
     integrity_scorer = IntegrityScorer()
-    pipeline = RAGPipeline(classifier, drift_monitor, retrieval_engine, integrity_scorer)
+    pipeline = RAGPipeline()
 
     app.state.classifier = classifier
     app.state.drift_monitor = drift_monitor
@@ -29,25 +33,31 @@ async def lifespan(app: FastAPI):
     yield
     print("🛑 Shutting down")
 
+
 app = FastAPI(
     title="Adversarial AI RAG Security API",
     description="Detects prompt injection, adversarial attacks, and monitors RAG pipeline integrity",
     version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
     lifespan=lifespan,
 )
 
+# ── CORS ──────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],        # lock down to Vercel URL after testing
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(health.router, prefix="/api", tags=["Health"])
-app.include_router(query.router, prefix="/api", tags=["Query"])
-app.include_router(attacks.router, prefix="/api", tags=["Attacks"])
-app.include_router(metrics.router, prefix="/api", tags=["Metrics"])
+# ── Routers ───────────────────────────────────────────────────────
+app.include_router(health.router,  prefix="/api/v1", tags=["Health"])
+app.include_router(query.router,   prefix="/api/v1", tags=["Query"])
+app.include_router(attacks.router, prefix="/api/v1", tags=["Attacks"])
+app.include_router(metrics.router, prefix="/api/v1", tags=["Metrics"])
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
